@@ -6,6 +6,7 @@ import {
   MidiTrack,
   ClipSlot,
   type ActivationContext,
+  type ClipSlotSelection,
   type Handle,
   type NoteDescription,
 } from "@ableton-extensions/sdk";
@@ -341,9 +342,52 @@ export function activate(activation: ActivationContext) {
     console.log("Crystallized →", pattern);
   });
 
+  // 5. Batch eval — selected clip slots (Cmd+click to multi-select in session view)
+  context.commands.registerCommand("strudel.evalSelection", async (arg: unknown) => {
+    const sel = arg as ClipSlotSelection;
+    const clips: MidiClip<"1.0.0">[] = [];
+    for (const handle of sel.selected_clip_slots) {
+      const slot = context.getObjectFromHandle(handle, ClipSlot);
+      const clip = slot.clip;
+      if (clip instanceof MidiClip && clip.name.trim()) clips.push(clip);
+    }
+    if (!clips.length) return;
+    console.log(`[strudel] evaluating ${clips.length} selected clips`);
+    for (const clip of clips) {
+      const { pattern, cycles } = parseClipName(clip.name);
+      if (!pattern) continue;
+      await evalAndWrite(context, pattern, cycles, bpm(), {
+        writeNotes: async (notes) => {
+          await context.withinTransaction(async () => { clip.notes = notes; clip.looping = true; });
+        },
+      });
+    }
+  });
+
+  // 6. Batch eval — all arrangement clips on a MIDI track
+  context.commands.registerCommand("strudel.evalTrack", async (arg: unknown) => {
+    const track = context.getObjectFromHandle(arg as Handle, MidiTrack);
+    const clips = track.arrangementClips.filter(
+      (c): c is MidiClip<"1.0.0"> => c instanceof MidiClip && !!c.name.trim(),
+    );
+    if (!clips.length) return;
+    console.log(`[strudel] evaluating ${clips.length} clips on track`);
+    for (const clip of clips) {
+      const { pattern, cycles } = parseClipName(clip.name);
+      if (!pattern) continue;
+      await evalAndWrite(context, pattern, cycles, bpm(), {
+        writeNotes: async (notes) => {
+          await context.withinTransaction(async () => { clip.notes = notes; clip.looping = true; });
+        },
+      });
+    }
+  });
+
   // ── Context menu registrations ────────────────────────────────────────────
   context.ui.registerContextMenuAction("MidiClip", "Evaluate as Strudel",           "strudel.eval");
   context.ui.registerContextMenuAction("ClipSlot",  "Create Strudel pattern…",       "strudel.create");
   context.ui.registerContextMenuAction("ClipSlot",  "Generate with AI…",             "strudel.ai");
-  context.ui.registerContextMenuAction("MidiClip",  "Crystallize → Strudel pattern", "strudel.crystallize");
+  context.ui.registerContextMenuAction("MidiClip",        "Crystallize → Strudel pattern",  "strudel.crystallize");
+  context.ui.registerContextMenuAction("ClipSlotSelection","Evaluate selection as Strudel",  "strudel.evalSelection");
+  context.ui.registerContextMenuAction("MidiTrack",        "Evaluate all clips as Strudel",  "strudel.evalTrack");
 }

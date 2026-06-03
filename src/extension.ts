@@ -6,6 +6,7 @@ import {
   MidiTrack,
   ClipSlot,
   type ActivationContext,
+  type ArrangementSelection,
   type ClipSlotSelection,
   type Handle,
   type NoteDescription,
@@ -384,11 +385,43 @@ export function activate(activation: ActivationContext) {
     }
   });
 
+  // 7. Arrangement view multi-clip selection
+  context.commands.registerCommand("strudel.evalArrangementSelection", async (arg: unknown) => {
+    const sel = arg as ArrangementSelection;
+    // selected_lanes are track handles; find MIDI clips within the time selection
+    const clips: MidiClip<"1.0.0">[] = [];
+    for (const laneHandle of sel.selected_lanes) {
+      const track = context.getObjectFromHandle(laneHandle, MidiTrack);
+      for (const clip of track.arrangementClips) {
+        if (!(clip instanceof MidiClip)) continue;
+        if (!clip.name.trim()) continue;
+        // Include clip if it overlaps the time selection
+        const start = clip.startTime;
+        const end = start + clip.duration;
+        if (end > sel.time_selection_start && start < sel.time_selection_end) {
+          clips.push(clip as MidiClip<"1.0.0">);
+        }
+      }
+    }
+    if (!clips.length) return;
+    console.log(`[strudel] evaluating ${clips.length} clips in arrangement selection`);
+    for (const clip of clips) {
+      const { pattern, cycles } = parseClipName(clip.name);
+      if (!pattern) continue;
+      await evalAndWrite(context, pattern, cycles, bpm(), {
+        writeNotes: async (notes) => {
+          await context.withinTransaction(async () => { clip.notes = notes; clip.looping = true; });
+        },
+      });
+    }
+  });
+
   // ── Context menu registrations ────────────────────────────────────────────
   context.ui.registerContextMenuAction("MidiClip", "Evaluate as Strudel",           "strudel.eval");
   context.ui.registerContextMenuAction("ClipSlot",  "Create Strudel pattern…",       "strudel.create");
   context.ui.registerContextMenuAction("ClipSlot",  "Generate with AI…",             "strudel.ai");
   context.ui.registerContextMenuAction("MidiClip",        "Crystallize → Strudel pattern",  "strudel.crystallize");
-  context.ui.registerContextMenuAction("ClipSlotSelection","Evaluate selection as Strudel",  "strudel.evalSelection");
-  context.ui.registerContextMenuAction("MidiTrack",        "Evaluate all clips as Strudel",  "strudel.evalTrack");
+  context.ui.registerContextMenuAction("ClipSlotSelection",              "Evaluate selection as Strudel",  "strudel.evalSelection");
+  context.ui.registerContextMenuAction("MidiTrack.ArrangementSelection", "Evaluate selection as Strudel",  "strudel.evalArrangementSelection");
+  context.ui.registerContextMenuAction("MidiTrack",                      "Evaluate all clips as Strudel",  "strudel.evalTrack");
 }

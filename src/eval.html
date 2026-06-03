@@ -70,33 +70,33 @@ async function run() {
   // mini() produces Pattern-of-Patterns that breaks method chaining.
   const NEEDS_MINI = new Set(['note','n','s','sound','chord']);
   function preprocess(code) {
-    // 1. "string".method() → mini("string").method()
-    //    Strudel lets you call pattern methods directly on string literals;
-    //    the REPL transpiler wraps them in mini(). e.g. "c3 e3".add(7)
+    // 1. "string".method() → mini("string").method()  (string literal chaining)
     let out = code.replace(
       /("(?:[^"\\]|\\.)*")\s*\./g,
       (match, str) => `mini(${str}).`,
     );
-    // 2. func("string") → func(mini("string")) for known control sources
+    // 2. Inject scale right after n("string") BEFORE mini-wrapping so there are
+    //    no nested parens yet. n("0 2 4") → n("0 2 4").scale("C4:major")
+    //    Then step 3 produces: n(mini("0 2 4")).scale("C4:major")
+    //    This means every()/gain() chains see already-mapped note values.
+    if (scaleMode && !out.includes('.scale(')) {
+      out = out.replace(
+        /\bn\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g,
+        (match) => `${match}.scale("${projectScale}")`,
+      );
+    }
+    // 3. func("string") → func(mini("string")) for known control sources
     out = out.replace(
       /\b(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g,
       (match, fn, str) => (fn !== 'mini' && NEEDS_MINI.has(fn)) ? `${fn}(mini(${str}))` : match,
     );
-    // Auto-apply project scale when Scale Mode is on and n() is used without
-    // an explicit .scale(). Always inject at the end so the whole chain gets
-    // mapped. Note: .add() before .scale() = scale-degree arithmetic (add 7
-    // degrees = one octave in a 7-note scale). .add() after .scale() = semitone
-    // arithmetic (.add(12) = one octave). Use projectScale explicitly to control
-    // placement: n(...).scale(projectScale).add(12)
-    if (scaleMode && /\bn\s*\(/.test(out) && !out.includes('.scale(')) {
-      out = `(${out}).scale("${projectScale}")`;
-    }
     return out;
   }
 
   let pat;
   try {
     const processed = preprocess(pattern);
+    console.log('[strudel-ext] original:', pattern);
     console.log('[strudel-ext] preprocessed:', processed);
     pat = (0, eval)(`(${processed})`);
   } catch (evalErr) {

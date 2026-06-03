@@ -40,14 +40,21 @@ async function run() {
     msg.textContent = 'Evaluating…';
     console.log('[strudel-ext] note:', typeof globalThis.note, 'repl:', typeof globalThis.repl);
 
-  // Use repl.evaluate() which runs the REPL transpiler — it converts
-  // note("c3 e3") → note(mini("c3 e3")) so string args are parsed as mini
-  // notation. Raw eval skips this and stores the string as a literal value.
+  // Preprocess: wrap bare string arguments in mini() so they're parsed as
+  // mini-notation patterns. The Strudel REPL transpiler does this step —
+  // without it note("c3 e3") stores the string as a literal control value
+  // instead of parsing it. Handles nested quotes and chained calls.
+  function preprocess(code) {
+    // Replace func("...") with func(mini("...")) for any function call
+    // where the argument is a bare string. Skips already-wrapped mini("...").
+    return code.replace(/\b(?!mini\b)(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g, '$1(mini($2))');
+  }
+
   let pat;
   try {
-    const r = repl({ defaultOutput: false });
-    const result = await r.evaluate(pattern);
-    pat = result?.pattern ?? result;
+    const processed = preprocess(pattern);
+    console.log('[strudel-ext] preprocessed:', processed);
+    pat = (0, eval)(`(${processed})`);
   } catch (evalErr) {
     throw new Error(`Syntax error in pattern: ${evalErr.message}`);
   }

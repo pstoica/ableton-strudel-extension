@@ -417,11 +417,12 @@ export function activate(activation: ActivationContext) {
   });
 
   // ── Context menu registrations ────────────────────────────────────────────
-  context.ui.registerContextMenuAction("MidiClip", "Evaluate as Strudel",           "strudel.eval");
-  context.ui.registerContextMenuAction("ClipSlot",  "Create Strudel pattern…",       "strudel.create");
-  context.ui.registerContextMenuAction("ClipSlot",  "Generate with AI…",             "strudel.ai");
-  context.ui.registerContextMenuAction("MidiClip",        "Crystallize → Strudel pattern",  "strudel.crystallize");
+  // Selection-scoped first so they appear at the top when a selection exists
   context.ui.registerContextMenuAction("ClipSlotSelection",              "Evaluate selection as Strudel",  "strudel.evalSelection");
   context.ui.registerContextMenuAction("MidiTrack.ArrangementSelection", "Evaluate selection as Strudel",  "strudel.evalArrangementSelection");
-  context.ui.registerContextMenuAction("MidiTrack",                      "Evaluate all clips as Strudel",  "strudel.evalTrack");
+  context.ui.registerContextMenuAction("MidiClip",  "Evaluate as Strudel",            "strudel.eval");
+  context.ui.registerContextMenuAction("MidiClip",  "Crystallize → Strudel pattern",  "strudel.crystallize");
+  context.ui.registerContextMenuAction("MidiTrack", "Evaluate all clips as Strudel",  "strudel.evalTrack");
+  context.ui.registerContextMenuAction("ClipSlot",  "Create Strudel pattern…",        "strudel.create");
+  context.ui.registerContextMenuAction("ClipSlot",  "Generate with AI…",              "strudel.ai");
 }

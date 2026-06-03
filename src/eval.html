@@ -15,7 +15,8 @@
   <div class="dot"></div><div class="dot"></div><div class="dot"></div>
   <span id="msg">Loading Strudel…</span>
 </body>
-<script type="module">
+<script src="/strudel.js"></script>
+<script>
 const p = new URLSearchParams(location.search);
 const pattern = decodeURIComponent(p.get('pattern') ?? '');
 const cycles  = parseFloat(p.get('cycles')  ?? '2');
@@ -24,31 +25,20 @@ const msg = document.getElementById('msg');
 
 const isWebKit  = window.webkit?.messageHandlers?.live;
 const isWebView2 = window.chrome?.webview;
-function close(payload) {
+function closeDialog(payload) {
   if (isWebKit)  window.webkit.messageHandlers.live.postMessage({ method:'close_and_send', params:[payload] });
   else if (isWebView2) window.chrome.webview.postMessage({ method:'close_and_send', params:[payload] });
 }
 
-try {
-  msg.textContent = 'Loading Strudel…';
-  console.log('[strudel-ext] loading modules, pattern:', pattern);
-
-  // Load core FIRST so register() is available before mini/tonal run their
-  // side-effects (mini calls register('note',...) on import — needs core ready).
-  const coreModule = await import('https://esm.run/@strudel/core@1.2.6');
-  console.log('[strudel-ext] core loaded, evalScope:', typeof coreModule.evalScope);
-
-  const { evalScope } = coreModule;
-
-  // evalScope takes pending import promises, awaits them, assigns exports to
-  // globalThis, and lets each module's register() side-effects run with core ready.
-  await evalScope(
-    import('https://esm.run/@strudel/mini@1.2.6'),
-    import('https://esm.run/@strudel/tonal@1.2.6'),
-  );
-
-  msg.textContent = 'Evaluating…';
-  console.log('[strudel-ext] note registered:', typeof globalThis.note);
+async function run() {
+  try {
+    // strudel.js (served locally, no CDN) fires 'strudelready' when done
+    if (!window.__strudelReady) {
+      msg.textContent = 'Loading Strudel…';
+      await new Promise(res => window.addEventListener('strudelready', res, { once: true }));
+    }
+    msg.textContent = 'Evaluating…';
+    console.log('[strudel-ext] note:', typeof note, 'pattern:', pattern);
 
   // Indirect eval always runs in global scope — sees everything evalScope
   // put on globalThis, unlike new Function which only sees explicit params.
@@ -104,9 +94,12 @@ try {
     });
   }
 
-  close(JSON.stringify({ ok: true, notes, totalBeats: cycles * beatsPerCycle }));
-} catch (err) {
-  close(JSON.stringify({ ok: false, error: String(err) }));
+  closeDialog(JSON.stringify({ ok: true, notes, totalBeats: cycles * beatsPerCycle }));
+  } catch (err) {
+    closeDialog(JSON.stringify({ ok: false, error: String(err) }));
+  }
 }
+
+run();
 </script>
 </html>

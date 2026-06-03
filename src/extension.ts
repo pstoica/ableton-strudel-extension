@@ -9,8 +9,9 @@ import {
   type Handle,
   type NoteDescription,
 } from "@ableton-extensions/sdk";
-import evalHtml   from "./eval.html";
-import promptHtml from "./prompt.html";
+import evalHtml      from "./eval.html";
+import promptHtml    from "./prompt.html";
+import strudelBundle from "./strudel-bundle.js";
 
 // ─── Config ────────────────────────────────────────────────────────────────
 // Set one of these in .env (or hard-code for now):
@@ -31,9 +32,15 @@ interface EvalResult {
 function serve(html: string): Promise<{ url: string; close: () => void }> {
   return new Promise((resolve, reject) => {
     const server = http.createServer(
-      (_req: http.IncomingMessage, res: http.ServerResponse) => {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(html);
+      (req: http.IncomingMessage, res: http.ServerResponse) => {
+        // Serve the pre-built Strudel bundle at /strudel.js (no CDN needed)
+        if (req.url?.startsWith("/strudel.js")) {
+          res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+          res.end(strudelBundle);
+        } else {
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(html);
+        }
       },
     );
     server.listen(0, "127.0.0.1", () => {

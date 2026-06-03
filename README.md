@@ -1,6 +1,6 @@
 # ableton-strudel-extension
 
-An [Ableton Live Extensions SDK](https://www.ableton.com/en/packs/extensions/) extension that evaluates [Strudel](https://strudel.cc) patterns directly into MIDI clips.
+An [Ableton Live Extensions SDK](https://www.ableton.com/en/extensions/) extension that evaluates [Strudel](https://strudel.cc) patterns directly into MIDI clips.
 
 Write a Strudel pattern as a clip name, right-click, and the notes appear. Optionally use AI to generate patterns from natural language.
 

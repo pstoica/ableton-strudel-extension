@@ -93,15 +93,17 @@ async function run() {
   const events = pat.queryArc(0, cycles);
   console.log('[strudel-ext] events:', events.length);
   if (events.length > 0) {
-    const sample = events[0];
-    console.log('[strudel-ext] first event value:', JSON.stringify(sample.value), 'type:', typeof sample.value);
-    console.log('[strudel-ext] first event part:', +sample.part.begin, '-', +sample.part.end);
+    // log first 3 events to show value format
+    events.slice(0, 3).forEach((e, i) => {
+      console.log(`[strudel-ext] event[${i}] value:`, JSON.stringify(e.value), 'part:', +e.part.begin, '-', +e.part.end);
+    });
   }
 
   // 1 cycle = 1 bar = 4 beats (standard 4/4)
   const beatsPerCycle = 4;
   const notes = [];
 
+  let skipped = 0;
   for (const e of events) {
     const val = e.value;
     // skip if no note info (e.g. pure CC events)
@@ -111,9 +113,8 @@ async function run() {
     // resolve pitch: could be MIDI number, note name, or object
     let pitch;
     if (typeof raw === 'number') {
-      pitch = raw;
+      pitch = Math.round(raw);
     } else if (typeof raw === 'string') {
-      // simple note name → MIDI (C4=60)
       const NOTE = {'c':0,'d':2,'e':4,'f':5,'g':7,'a':9,'b':11};
       const m = raw.toLowerCase().match(/^([a-g])(#|b?)(-?\d+)$/);
       if (m) {
@@ -121,11 +122,14 @@ async function run() {
         pitch = base + (parseInt(m[3]) + 1) * 12;
       }
     }
-    if (pitch == null || pitch < 0 || pitch > 127) continue;
+    if (pitch == null) continue;
+    if (pitch < 0 || pitch > 127) { skipped++; console.log('[strudel-ext] out-of-range pitch:', pitch, 'from value:', JSON.stringify(val)); continue; }
 
     const startBeat = +e.part.begin * beatsPerCycle;
     const endBeat   = +e.part.end   * beatsPerCycle;
-    const velocity  = Math.round((val?.velocity ?? val?.gain ?? 0.9) * 127);
+    // check velocity/vel/gain in that order; Strudel uses 'velocity'/'vel' for MIDI, 'gain' for audio
+    const velRaw = val?.velocity ?? val?.vel ?? val?.gain ?? 0.9;
+    const velocity = Math.round(velRaw * 127);
 
     notes.push({
       pitch: Math.round(pitch),
@@ -135,11 +139,12 @@ async function run() {
     });
   }
 
+  if (skipped) console.log(`[strudel-ext] ${skipped} events skipped (out of MIDI range 0-127)`);
   closeDialog(JSON.stringify({
     ok: true,
     notes,
     totalBeats: cycles * beatsPerCycle,
-    _debug: { eventCount: events.length, firstValue: events[0]?.value ?? null },
+    _debug: { eventCount: events.length, skipped, firstValue: events[0]?.value ?? null },
   }));
   } catch (err) {
     closeDialog(JSON.stringify({ ok: false, error: String(err) }));

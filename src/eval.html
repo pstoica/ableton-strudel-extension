@@ -33,20 +33,18 @@ try {
   msg.textContent = 'Loading Strudel…';
   console.log('[strudel-ext] loading modules, pattern:', pattern);
 
-  // Load all modules in parallel
-  const [coreModule, miniModule, tonalModule] = await Promise.all([
-    import('https://esm.run/@strudel/core@1.0.1'),
-    import('https://esm.run/@strudel/mini@1.0.1'),
-    import('https://esm.run/@strudel/tonal@1.0.1'),
-  ]);
-  console.log('[strudel-ext] modules loaded, keys:', Object.keys(miniModule).slice(0,8));
+  // Load core FIRST so register() is available before mini/tonal run their
+  // side-effects (mini calls register('note',...) on import — needs core ready).
+  const coreModule = await import('https://esm.run/@strudel/core@1.2.6');
+  console.log('[strudel-ext] core loaded, evalScope:', typeof coreModule.evalScope);
 
-  // evalScope registers everything onto globalThis (note, slow, stack, etc.)
-  // new Function scope injection missed dynamically-registered functions.
   const { evalScope } = coreModule;
+
+  // evalScope takes pending import promises, awaits them, assigns exports to
+  // globalThis, and lets each module's register() side-effects run with core ready.
   await evalScope(
-    Promise.resolve(miniModule),
-    Promise.resolve(tonalModule),
+    import('https://esm.run/@strudel/mini@1.2.6'),
+    import('https://esm.run/@strudel/tonal@1.2.6'),
   );
 
   msg.textContent = 'Evaluating…';

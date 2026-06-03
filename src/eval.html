@@ -41,16 +41,17 @@ try {
   ]);
   console.log('[strudel-ext] modules loaded, keys:', Object.keys(miniModule).slice(0,8));
 
-  // Build a flat scope from all modules and evaluate via new Function —
-  // more reliable than repl().evaluate() which has version-dependent return shapes
-  const scope = Object.assign({}, coreModule, miniModule, tonalModule);
+  // Build a flat scope from all modules and evaluate via new Function.
+  // Filter out reserved words (like 'default') that can't be parameter names.
+  const reserved = new Set(['default','delete','export','import','return','class','new','this','let','const','var','for','while','if','else','switch','case','break','continue','try','catch','throw','typeof','instanceof']);
+  const rawScope = Object.assign({}, coreModule, miniModule, tonalModule);
+  const scope = Object.fromEntries(Object.entries(rawScope).filter(([k]) => /^[a-zA-Z_$]/.test(k) && !reserved.has(k)));
 
   msg.textContent = 'Evaluating…';
-  console.log('[strudel-ext] evaluating with scope keys:', Object.keys(scope).filter(k => /^[a-z]/.test(k)).join(', '));
+  console.log('[strudel-ext] scope keys:', Object.keys(scope).filter(k => /^[a-z]/.test(k)).join(', '));
 
   let pat;
   try {
-    // eslint-disable-next-line no-new-func
     const fn = new Function(...Object.keys(scope), `"use strict"; return (${pattern})`);
     pat = fn(...Object.values(scope));
   } catch (evalErr) {

@@ -107,6 +107,10 @@ npm run build:prod   # minified production build
 - CC/control patterns work in Strudel's own REPL via Web MIDI as normal; the SDK can only write note data to MIDI clips
 - Clip loop length is set at creation time; to change it, delete and recreate the clip with a different `@N` suffix
 
+## Inspiration
+
+Inspired by [mutateful](https://github.com/carrierdown/mutateful), which pioneered the idea of using clip names as live-coded expressions inside Ableton Live.
+
 ## License
 
 MIT

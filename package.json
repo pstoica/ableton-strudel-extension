@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --noEmit && tsx build.ts",
     "build:prod": "tsc --noEmit && tsx build.ts --production",
-    "start": "tsx build.ts && extensions-cli run"
+    "start": "tsx build.ts && extensions-cli run",
+    "watch": "tsx build.ts --watch"
   },
   "dependencies": {
     "@ableton-extensions/sdk": "file:/Users/patrick/Downloads/extensions-sdk-1.0.0-beta.0/ableton-extensions-sdk-1.0.0-beta.0.tgz",

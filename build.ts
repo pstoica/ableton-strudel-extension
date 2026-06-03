@@ -3,8 +3,9 @@ import * as fs from "node:fs";
 
 const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
 const production = process.argv.includes("--production");
+const watch      = process.argv.includes("--watch");
 
-await esbuild.build({
+const ctx = await esbuild.context({
   entryPoints: ["src/extension.ts"],
   outfile: manifest.entry,
   bundle: true,
@@ -16,3 +17,11 @@ await esbuild.build({
   sourcemap: !production,
   loader: { ".html": "text" },
 });
+
+if (watch) {
+  await ctx.watch();
+  console.log("Watching for changes — restart 'extensions-cli run' once, then edits hot-reload the bundle.");
+} else {
+  await ctx.rebuild();
+  await ctx.dispose();
+}

@@ -31,31 +31,38 @@ function close(payload) {
 
 try {
   msg.textContent = 'Loading Strudel…';
+  console.log('[strudel-ext] loading modules, pattern:', pattern);
 
-  // Load all modules fully before evaluating so note(), slow() etc. are in scope
+  // Load all modules in parallel
   const [coreModule, miniModule, tonalModule] = await Promise.all([
     import('https://esm.run/@strudel/core@1.0.1'),
     import('https://esm.run/@strudel/mini@1.0.1'),
     import('https://esm.run/@strudel/tonal@1.0.1'),
   ]);
+  console.log('[strudel-ext] modules loaded, keys:', Object.keys(miniModule).slice(0,8));
 
-  const { evalScope, repl } = coreModule;
-
-  // evalScope registers exports on globalThis so they're available in evaluate()
-  await evalScope(
-    Promise.resolve(miniModule),
-    Promise.resolve(tonalModule),
-  );
+  // Build a flat scope from all modules and evaluate via new Function —
+  // more reliable than repl().evaluate() which has version-dependent return shapes
+  const scope = Object.assign({}, coreModule, miniModule, tonalModule);
 
   msg.textContent = 'Evaluating…';
+  console.log('[strudel-ext] evaluating with scope keys:', Object.keys(scope).filter(k => /^[a-z]/.test(k)).join(', '));
 
-  const result = await repl({}).evaluate(pattern);
-  // repl.evaluate() returns { pattern } in some versions, the pattern directly in others
-  const pat = result?.pattern ?? result;
+  let pat;
+  try {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function(...Object.keys(scope), `"use strict"; return (${pattern})`);
+    pat = fn(...Object.values(scope));
+  } catch (evalErr) {
+    throw new Error(`Syntax error in pattern: ${evalErr.message}`);
+  }
+
+  console.log('[strudel-ext] pat:', pat, 'queryArc?', typeof pat?.queryArc);
   if (!pat || typeof pat.queryArc !== 'function')
-    throw new Error(`Pattern evaluation returned nothing. Check your syntax.`);
+    throw new Error(`Pattern did not return a Strudel Pattern. Got: ${JSON.stringify(pat)}`);
 
   const events = pat.queryArc(0, cycles);
+  console.log('[strudel-ext] events:', events.length);
 
   // 1 cycle = 1 bar = 4 beats (standard 4/4)
   const beatsPerCycle = 4;

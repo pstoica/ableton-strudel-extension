@@ -174,8 +174,15 @@ async function evalAndWrite(
     evalServer.close();
   }
   const result = JSON.parse(raw) as EvalResult;
-  if (!result.ok) { console.error("Strudel eval error:", result.error); return; }
-  if (!result.notes.length) return;
+  if (!result.ok) {
+    console.error(`[strudel] eval error for pattern "${pattern}":`, result.error);
+    return;
+  }
+  if (!result.notes.length) {
+    console.warn(`[strudel] "${pattern}" produced no notes (${cycles} cycles @ ${bpm} bpm)`);
+    return;
+  }
+  console.log(`[strudel] "${pattern}" → ${result.notes.length} notes, ${result.totalBeats} beats`);
   await target.writeNotes(result.notes);
 }
 

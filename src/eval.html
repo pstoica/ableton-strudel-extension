@@ -57,6 +57,12 @@ async function run() {
     globalThis.projectOctave = scaleLen;
     globalThis.projectRoot   = root;
 
+    // Runtime diagnostic: check if run(1) has .add() on its prototype
+    if (typeof run !== 'undefined') {
+      const _t = run(1);
+      console.log('[strudel-ext] run(1) type:', typeof _t, 'constructor:', _t?.constructor?.name, '.add:', typeof _t?.add, '.slow:', typeof _t?.slow, 'proto methods:', Object.getOwnPropertyNames(_t?.constructor?.prototype||{}).filter(k=>!k.startsWith('_')).slice(0,8).join(','));
+    }
+
   // Preprocess: wrap string args in mini() only for "control source" functions
   // (note, n, s, sound) that store strings as literal control values instead of
   // auto-parsing them. Other functions like run(), add(), cat() etc. are already

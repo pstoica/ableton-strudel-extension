@@ -43,7 +43,19 @@ async function run() {
       await new Promise(res => window.addEventListener('strudelready', res, { once: true }));
     }
     msg.textContent = 'Evaluating…';
-    console.log('[strudel-ext] note:', typeof globalThis.note, 'repl:', typeof globalThis.repl);
+
+    // Inject project key/scale as globals — always available regardless of scaleMode.
+    // projectScale  → use as: n("0 2 4").scale(projectScale)
+    // projectOctave → scale degrees per octave (.add(projectOctave) shifts up one octave)
+    const scaleLen = (n => {
+      if (/pentatonic/i.test(n)) return 5;
+      if (/blues/i.test(n))      return 6;
+      if (/chromatic/i.test(n))  return 12;
+      return 7; // major / minor / dorian / etc.
+    })(scaleName);
+    globalThis.projectScale  = projectScale;
+    globalThis.projectOctave = scaleLen;
+    globalThis.projectRoot   = root;
 
   // Preprocess: wrap string args in mini() only for "control source" functions
   // (note, n, s, sound) that store strings as literal control values instead of

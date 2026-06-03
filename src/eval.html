@@ -70,7 +70,15 @@ async function run() {
   // mini() produces Pattern-of-Patterns that breaks method chaining.
   const NEEDS_MINI = new Set(['note','n','s','sound','chord']);
   function preprocess(code) {
+    // 1. "string".method() → mini("string").method()
+    //    Strudel lets you call pattern methods directly on string literals;
+    //    the REPL transpiler wraps them in mini(). e.g. "c3 e3".add(7)
     let out = code.replace(
+      /("(?:[^"\\]|\\.)*")\s*\./g,
+      (match, str) => `mini(${str}).`,
+    );
+    // 2. func("string") → func(mini("string")) for known control sources
+    out = out.replace(
       /\b(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g,
       (match, fn, str) => (fn !== 'mini' && NEEDS_MINI.has(fn)) ? `${fn}(mini(${str}))` : match,
     );

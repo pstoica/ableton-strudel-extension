@@ -15,6 +15,10 @@ await esbuild.build({
   bundle: true,
   format: "iife",
   platform: "browser",
+  // Tree-shaking must be OFF: @strudel/core registers note/slow/etc. via
+  // module-level side-effects (c("note","n") calls) that esbuild eliminates
+  // as dead code when only evalScope is explicitly imported.
+  treeShaking: false,
   minify: production,
   logLevel: "info",
 });

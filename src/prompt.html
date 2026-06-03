@@ -8,10 +8,10 @@
     --text: hsl(0,0%,71%); --accent: hsl(31,100%,67%); --muted: hsl(0,0%,41%);
   }
   * { box-sizing:border-box; margin:0; }
-  html,body { height:100%; background:var(--bg); color:var(--text);
+  html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text);
     font:500 11.5px/1.4 "AbletonSansSmall",system-ui,sans-serif;
     -webkit-font-smoothing:antialiased; }
-  body { padding:14px; display:flex; flex-direction:column; gap:10px; }
+  body { padding:14px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
   label { font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
   input,textarea {
     width:100%; background:var(--input-bg); color:var(--text);

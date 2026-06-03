@@ -18,9 +18,14 @@
 <script src="/strudel.js"></script>
 <script>
 const p = new URLSearchParams(location.search);
-const pattern = decodeURIComponent(p.get('pattern') ?? '');
-const cycles  = parseFloat(p.get('cycles')  ?? '2');
-const bpm     = parseFloat(p.get('bpm')     ?? '120');
+const pattern   = decodeURIComponent(p.get('pattern') ?? '');
+const cycles    = parseFloat(p.get('cycles')  ?? '2');
+const bpm       = parseFloat(p.get('bpm')     ?? '120');
+const root      = p.get('root')      ?? 'C';
+const scaleName = p.get('scale')     ?? 'Major';
+const scaleMode = p.get('scaleMode') === '1';
+// Strudel scale string e.g. "C4:major" — used when auto-applying to n() patterns
+const projectScale = `${root}4:${scaleName.toLowerCase()}`;
 const msg = document.getElementById('msg');
 
 const isWebKit  = window.webkit?.messageHandlers?.live;
@@ -40,14 +45,17 @@ async function run() {
     msg.textContent = 'Evaluating…';
     console.log('[strudel-ext] note:', typeof globalThis.note, 'repl:', typeof globalThis.repl);
 
-  // Preprocess: wrap bare string arguments in mini() so they're parsed as
-  // mini-notation patterns. The Strudel REPL transpiler does this step —
-  // without it note("c3 e3") stores the string as a literal control value
-  // instead of parsing it. Handles nested quotes and chained calls.
+  // Preprocess: wrap bare string args in mini(), and auto-inject project scale
+  // when n() is used without an explicit .scale() call.
   function preprocess(code) {
-    // Replace func("...") with func(mini("...")) for any function call
-    // where the argument is a bare string. Skips already-wrapped mini("...").
-    return code.replace(/\b(?!mini\b)(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g, '$1(mini($2))');
+    // 1. Wrap bare strings in mini() so they parse as mini-notation patterns
+    let out = code.replace(/\b(?!mini\b)(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g, '$1(mini($2))');
+    // 2. Auto-apply project scale: n("0 2 4") → n("0 2 4").scale("C4:major")
+    //    Only when n() is present and .scale() is not already in the code.
+    if (scaleMode && /\bn\s*\(/.test(out) && !out.includes('.scale(')) {
+      out = `(${out}).scale("${projectScale}")`;
+    }
+    return out;
   }
 
   let pat;

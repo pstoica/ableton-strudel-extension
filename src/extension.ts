@@ -173,8 +173,9 @@ async function evalAndWrite(
   bpm: number,
   target: { writeNotes: (notes: NoteDescription[]) => Promise<void> },
 ): Promise<void> {
+  const key = getSongKey(context);
   const evalServer = await serve(evalHtml);
-  const evalUrl = `${evalServer.url}?pattern=${encodeURIComponent(pattern)}&cycles=${cycles}&bpm=${bpm}`;
+  const evalUrl = `${evalServer.url}?pattern=${encodeURIComponent(pattern)}&cycles=${cycles}&bpm=${bpm}&root=${encodeURIComponent(key.rootName)}&scale=${encodeURIComponent(key.scaleName)}&scaleMode=${key.scaleMode ? '1' : '0'}`;
   let raw: string;
   try {
     raw = await context.ui.showModalDialog(evalUrl, 480, 64);

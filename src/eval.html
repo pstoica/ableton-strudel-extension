@@ -38,14 +38,16 @@ async function run() {
       await new Promise(res => window.addEventListener('strudelready', res, { once: true }));
     }
     msg.textContent = 'Evaluating…';
-    console.log('[strudel-ext] note:', typeof note, 'pattern:', pattern);
+    console.log('[strudel-ext] note:', typeof globalThis.note, 'repl:', typeof globalThis.repl);
 
-  // Indirect eval always runs in global scope — sees everything evalScope
-  // put on globalThis, unlike new Function which only sees explicit params.
+  // Use repl.evaluate() which runs the REPL transpiler — it converts
+  // note("c3 e3") → note(mini("c3 e3")) so string args are parsed as mini
+  // notation. Raw eval skips this and stores the string as a literal value.
   let pat;
   try {
-    // eslint-disable-next-line no-eval
-    pat = (0, eval)(`(${pattern})`);
+    const r = repl({ defaultOutput: false });
+    const result = await r.evaluate(pattern);
+    pat = result?.pattern ?? result;
   } catch (evalErr) {
     throw new Error(`Syntax error in pattern: ${evalErr.message}`);
   }

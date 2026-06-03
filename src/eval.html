@@ -93,6 +93,18 @@ async function run() {
     return out;
   }
 
+  // Strip continuous-signal modifiers (.gain(saw...), .velocity(sine...) etc.)
+  // that are great for audio but break queryArc's discrete event structure.
+  // We capture these and use their base value as default velocity instead.
+  function stripAudioModifiers(code) {
+    // Remove .gain(...), .velocity(...), .vel(...) whose args contain audio signals
+    // (saw, sine, square, tri, etc.) — leave simple numeric .gain(0.5) alone
+    const signals = /\b(?:saw|sine|sin|cosine|cos|square|tri|tri2|noise|pink|brown|rand)\b/;
+    return code.replace(/\.\s*(?:gain|velocity|vel)\s*\([^)]{0,300}\)/g, m =>
+      signals.test(m) ? '' : m
+    );
+  }
+
   let pat;
   try {
     const processed = preprocess(pattern);
@@ -107,10 +119,22 @@ async function run() {
   if (!pat || typeof pat.queryArc !== 'function')
     throw new Error(`Pattern did not return a Strudel Pattern. Got: ${typeof pat}`);
 
-  const events = pat.queryArc(0, cycles);
+  let events = pat.queryArc(0, cycles);
   console.log('[strudel-ext] events:', events.length);
+  if (events.length === 0) {
+    // Retry without audio-signal modifiers (.gain(saw...) etc.) which can
+    // produce 0 events in queryArc by disrupting the discrete event structure
+    const stripped = stripAudioModifiers(preprocess(pattern));
+    if (stripped !== preprocess(pattern)) {
+      console.log('[strudel-ext] retrying without audio modifiers:', stripped);
+      try {
+        const pat2 = (0, eval)(`(${stripped})`);
+        events = pat2?.queryArc(0, cycles) ?? [];
+        console.log('[strudel-ext] retry events:', events.length);
+      } catch (e) { console.log('[strudel-ext] retry failed:', e.message); }
+    }
+  }
   if (events.length > 0) {
-    // log first 3 events to show value format
     events.slice(0, 3).forEach((e, i) => {
       console.log(`[strudel-ext] event[${i}] value:`, JSON.stringify(e.value), 'part:', +e.part.begin, '-', +e.part.end);
     });

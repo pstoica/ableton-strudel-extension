@@ -30,15 +30,31 @@ function close(payload) {
 }
 
 try {
+  msg.textContent = 'Loading Strudel…';
+
+  // Load all modules fully before evaluating so note(), slow() etc. are in scope
+  const [coreModule, miniModule, tonalModule] = await Promise.all([
+    import('https://esm.run/@strudel/core@1.0.1'),
+    import('https://esm.run/@strudel/mini@1.0.1'),
+    import('https://esm.run/@strudel/tonal@1.0.1'),
+  ]);
+
+  const { evalScope, repl } = coreModule;
+
+  // evalScope registers exports on globalThis so they're available in evaluate()
+  await evalScope(
+    Promise.resolve(miniModule),
+    Promise.resolve(tonalModule),
+  );
+
   msg.textContent = 'Evaluating…';
 
-  // Load Strudel from CDN — runs fine in browser context
-  const { evalScope, repl } = await import('https://esm.run/@strudel/core@1.0.1');
-  const strudelMini  = import('https://esm.run/@strudel/mini@1.0.1');
-  const strudelTonal = import('https://esm.run/@strudel/tonal@1.0.1');
-  await evalScope(strudelMini, strudelTonal);
+  const result = await repl({}).evaluate(pattern);
+  // repl.evaluate() returns { pattern } in some versions, the pattern directly in others
+  const pat = result?.pattern ?? result;
+  if (!pat || typeof pat.queryArc !== 'function')
+    throw new Error(`Pattern evaluation returned nothing. Check your syntax.`);
 
-  const { pattern: pat } = await repl({}).evaluate(pattern);
   const events = pat.queryArc(0, cycles);
 
   // 1 cycle = 1 bar = 4 beats (standard 4/4)

@@ -186,7 +186,8 @@ async function evalAndWrite(
     return;
   }
   if (!result.notes.length) {
-    console.warn(`[strudel] "${pattern}" produced no notes (${cycles} cycles @ ${bpm} bpm)`);
+    const d = (result as unknown as Record<string,unknown>)._debug as Record<string,unknown> | undefined;
+    console.warn(`[strudel] "${pattern}" produced no notes (${cycles} cycles @ ${bpm} bpm). events=${d?.eventCount}, firstValue=${JSON.stringify(d?.firstValue)}`);
     return;
   }
   console.log(`[strudel] "${pattern}" → ${result.notes.length} notes, ${result.totalBeats} beats`);

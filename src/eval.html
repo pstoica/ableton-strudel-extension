@@ -56,6 +56,11 @@ async function run() {
 
   const events = pat.queryArc(0, cycles);
   console.log('[strudel-ext] events:', events.length);
+  if (events.length > 0) {
+    const sample = events[0];
+    console.log('[strudel-ext] first event value:', JSON.stringify(sample.value), 'type:', typeof sample.value);
+    console.log('[strudel-ext] first event part:', +sample.part.begin, '-', +sample.part.end);
+  }
 
   // 1 cycle = 1 bar = 4 beats (standard 4/4)
   const beatsPerCycle = 4;
@@ -94,7 +99,12 @@ async function run() {
     });
   }
 
-  closeDialog(JSON.stringify({ ok: true, notes, totalBeats: cycles * beatsPerCycle }));
+  closeDialog(JSON.stringify({
+    ok: true,
+    notes,
+    totalBeats: cycles * beatsPerCycle,
+    _debug: { eventCount: events.length, firstValue: events[0]?.value ?? null },
+  }));
   } catch (err) {
     closeDialog(JSON.stringify({ ok: false, error: String(err) }));
   }

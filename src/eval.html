@@ -68,10 +68,13 @@ async function run() {
       /\b(\w+)\s*\(\s*("(?:[^"\\]|\\.)*")\s*\)/g,
       (match, fn, str) => (fn !== 'mini' && NEEDS_MINI.has(fn)) ? `${fn}(mini(${str}))` : match,
     );
-    // Auto-apply project scale only when n() is used without any .add()/.scale() —
-    // if .add() is present the user likely wants control over chain order so we
-    // don't inject (they can use projectScale explicitly: n(...).scale(projectScale).add(12))
-    if (scaleMode && /\bn\s*\(/.test(out) && !out.includes('.scale(') && !out.includes('.add(')) {
+    // Auto-apply project scale when Scale Mode is on and n() is used without
+    // an explicit .scale(). Always inject at the end so the whole chain gets
+    // mapped. Note: .add() before .scale() = scale-degree arithmetic (add 7
+    // degrees = one octave in a 7-note scale). .add() after .scale() = semitone
+    // arithmetic (.add(12) = one octave). Use projectScale explicitly to control
+    // placement: n(...).scale(projectScale).add(12)
+    if (scaleMode && /\bn\s*\(/.test(out) && !out.includes('.scale(')) {
       out = `(${out}).scale("${projectScale}")`;
     }
     return out;

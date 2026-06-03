@@ -57,10 +57,16 @@ async function run() {
     globalThis.projectOctave = scaleLen;
     globalThis.projectRoot   = root;
 
-    // Runtime diagnostic: check if run(1) has .add() on its prototype
-    if (typeof run !== 'undefined') {
-      const _t = run(1);
-      console.log('[strudel-ext] run(1) type:', typeof _t, 'constructor:', _t?.constructor?.name, '.add:', typeof _t?.add, '.slow:', typeof _t?.slow, 'proto methods:', Object.getOwnPropertyNames(_t?.constructor?.prototype||{}).filter(k=>!k.startsWith('_')).slice(0,8).join(','));
+    // Step-by-step diagnostic: find which stage drops events
+    if (typeof n !== 'undefined' && typeof mini !== 'undefined') {
+      const _d = n(mini('0 2 4'));
+      const _d1 = _d.queryArc(0, 1);
+      console.log('[strudel-ext] DIAG n(mini("0 2 4")) events:', _d1.length, 'val0:', JSON.stringify(_d1[0]?.value));
+      if (typeof scale !== 'undefined') {
+        const _d2 = n(mini('0 2 4')).scale('C4:major');
+        const _d2e = _d2.queryArc(0, 1);
+        console.log('[strudel-ext] DIAG .scale("C4:major") events:', _d2e.length, 'val0:', JSON.stringify(_d2e[0]?.value));
+      }
     }
 
   // Preprocess: wrap string args in mini() only for "control source" functions

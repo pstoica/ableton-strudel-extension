@@ -1,5 +1,19 @@
 # ableton-strudel-extension
 
+> ⚠️ **Abandoned** — see [streusel-extension](https://github.com/pstoica/streusel-extension) for the active replacement.
+
+This approach was dropped due to fundamental incompatibilities between Strudel's runtime and the Ableton Extensions SDK environment:
+
+- **Strudel requires a browser context** — the full runtime (Web Audio, pattern evaluation, signal processing) needs a WebView. The Extensions SDK only provides a modal dialog as a UI surface, which blocks the Ableton UI entirely while open.
+- **The mini-notation transpiler can't run in Node** — Strudel's `@strudel/core` pulls in `@kabelsalat/web` (a browser-only audio graph library), making it impossible to evaluate patterns directly in the extension's Node process. Every evaluation required a full browser WebView roundtrip.
+- **Continuous signals break `queryArc`** — Strudel idioms like `.gain(saw.fast(2).range(0,1))` use continuous signal patterns that return 0 discrete events when queried, making them impossible to convert to MIDI notes.
+- **The REPL transpiler is hard to replicate** — Strudel's REPL preprocesses code before `eval()` (wrapping string args in `mini()`, etc.). Replicating this preprocessing with regexes is fragile and breaks edge cases like `run("0 1 2").add(3)`.
+- **Clip names are short** — Strudel's expressive power requires longer expressions than comfortably fit in a clip name, which is the only text input surface available in the Extensions SDK without a blocking modal.
+
+The replacement ([streusel-extension](https://github.com/pstoica/streusel-extension)) implements a purpose-built mini-notation DSL in pure TypeScript that runs directly in Node, evaluates instantly, and is designed around the clip-name constraint.
+
+---
+
 An [Ableton Live Extensions SDK](https://www.ableton.com/en/extensions/) extension that evaluates [Strudel](https://strudel.cc) patterns directly into MIDI clips.
 
 Write a Strudel pattern as a clip name, right-click, and the notes appear. Optionally use AI to generate patterns from natural language.
